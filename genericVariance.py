@@ -142,7 +142,7 @@ if __name__ == "__main__":
   
       load_partial(prob_info,partial)
 
-  pool = Pool(processes=40)
+  pool = Pool(processes=50)
   
   active_prob_list = prob_list
   while True:

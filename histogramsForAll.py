@@ -8,23 +8,46 @@ from collections import defaultdict
 
 import numpy as np
 
+class SoundnessCheck:
+  def __init__(self,probinfo):
+    self.probinfo = probinfo
+  
+  def check(self,prob,stat):
+    (_rate,spc) =  probinfo[prob.split("/")[-1]]
+    tptp_stat_raw = spc.split("_")[1]
+
+    if tptp_stat_raw in ["UNS","THM","CAX"]:
+      tptp_stat = "uns"
+    elif tptp_stat_raw in ["SAT","CSA"]:
+      tptp_stat = "sat"
+    else:
+      tptp_stat = "unk"
+
+    # we can't always trust the probinfo
+    if prob == 'Problems/CSR/CSR188+1.p' and tptp_stat_raw == "CSA":
+      tptp_stat = "uns"
+
+    if stat != "---" and tptp_stat != stat:      
+      print(prob,stat,tptp_stat_raw) 
+
+
 class ProbStat:
   def __init__(self):
-    self.successes = []
+    self.results = []
     self.iters = []
     self.instrs = []
     self.seeds = []
 
-  def add(self, success, iterations, instructions, seed):
+  def add(self, result, iterations, instructions, seed):
     self.iters.append(iterations)
     self.instrs.append(instructions)
-    self.successes.append(success)
+    self.results.append(result)
     self.seeds.append(seed)
 
 def load_partial(prob_info,partial):
-  for (prob_name, seed, success, iterations, instructions) in partial:
+  for (prob_name, seed, result, iterations, instructions) in partial:
     info = prob_info[prob_name]
-    info.add(success, iterations, instructions, seed)
+    info.add(result, iterations, instructions, seed)
 
 if __name__ == "__main__":
   # Sample the whole TPTP so much that we can see how much chaose is really in there
@@ -49,11 +72,12 @@ if __name__ == "__main__":
     with open(sys.argv[2],'rb') as f:
       stats_hack = pickle.load(f,encoding='utf-8')
 
-  # hunting for the coefficient of variation (https://en.wikipedia.org/wiki/Coefficient_of_variation)
-  '''
   with open("probinfo7.5.0.pkl",'rb') as f:
     probinfo = pickle.load(f,encoding='utf-8')
-    
+  sc = SoundnessCheck(probinfo)
+
+  # hunting for the coefficient of variation (https://en.wikipedia.org/wiki/Coefficient_of_variation)
+  '''  
   to_sort = []
   for prob_name,info in prob_info.items():
     frac = sum(1 for succ in info.successes if succ != False and succ != "---")/len(info.successes)
@@ -147,21 +171,21 @@ if __name__ == "__main__":
   PAR_PENALTY = 100000
   to_sort = []
   for prob_name,info in prob_info.items():
-
-    # SKIPPING SAT AT THE MOMENT!
     '''
-    if "sat" in info.successes:
-      continue
+    if prob_name == 'Problems/NLP/NLP011+1.p':
+      print(list(zip(info.seeds,info.results,info.instrs)))
     '''
 
     succ_cnt = 0
     instrs = []
     for i,instr in enumerate(info.instrs):
-      if info.successes[i] in [True, "sat", "uns"]:
+      if info.results[i] in [True, "sat", "uns"]:
         succ_cnt += 1
       else:
         instr = PAR_PENALTY
       instrs.append(instr)
+
+      sc.check(prob_name,info.results[i])
 
     probsolve = succ_cnt/len(info.instrs)
   
@@ -171,7 +195,7 @@ if __name__ == "__main__":
         how_many_weird += 1
         print(prob_name)
         print(stats_hack[prob_name])
-        print(list(zip(info.instrs,info.successes)))
+        print(list(zip(info.instrs,info.results)))
         print()
 
     to_sort.append((probsolve,instrs,prob_name))
@@ -185,8 +209,8 @@ if __name__ == "__main__":
   how_many_contribs = 4
   addional_contribs = np.zeros(1+how_many_contribs)
 
-  how_namy_cacti = 1 # additional cacti show parallel performance of running multiple compies of the strat (as in the LPAR92 paper)
-  weighted_instrs = tuple([] for _ in range(how_namy_cacti))
+  how_many_cacti = 1 # additional cacti show parallel performance of running multiple compies of the strat (as in the LPAR92 paper)
+  weighted_instrs = tuple([] for _ in range(how_many_cacti))
 
   to_sort.sort()
   easy_cnt = 0
@@ -206,7 +230,7 @@ if __name__ == "__main__":
     l = len(instrs)
     # print(l)
     for instr in instrs:
-      for k in range(how_namy_cacti):      
+      for k in range(how_many_cacti):      
         w = (l/len(instrs))**(k+1) - ((l-1)/len(instrs))**(k+1)
         # print(k,l,w)
         weighted_instrs[k].append((instr,w))
@@ -250,7 +274,7 @@ if __name__ == "__main__":
   ax2.set_yticks(np.arange(0, 5.1, step=1.0))
   # ax2.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3), useOffset=False)
   
-  for k in range(how_namy_cacti):
+  for k in range(how_many_cacti):
     Xs = []
     Ys = []
     accum_w = 0.0
@@ -297,16 +321,14 @@ if __name__ == "__main__":
   
   fig.tight_layout() # otherwise the right y-label is slightly clipped
   
-  # ax1.set_xlim([7000,10000])
+  ax1.set_xlim([7000,10000])
   # ax1.set_xlim([0,(easy_cnt+med_cnt)*1.2])
-  
-  ax1.set_xlim([250,800])
+  # ax1.set_xlim([250,800])
   
   plt.savefig("prob_solve.png",format='png', dpi=300)
 
   plt.close(fig)
   
-
   # The old TPTP graph below
   """
   to_sort = []

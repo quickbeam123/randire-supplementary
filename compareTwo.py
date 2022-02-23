@@ -24,6 +24,7 @@ class ProbStat:
     self.seeds.append(seed)
 
   def get_mean_par(self,par=2):
+    # print(list(zip(self.successes,self.instrs)))
     return sum(instr if (self.successes[i] != False and self.successes[i] != "---") else par*instrout\
       for i,instr in enumerate(self.instrs)) / len(self.instrs)
 
@@ -82,6 +83,9 @@ if __name__ == "__main__":
   sum_frac_diff_1 = 0.0
   sum_frac_diff_2 = 0.0
   
+  sum_par2_diff_1 = 0.0
+  sum_par2_diff_2 = 0.0
+  
   sum_frac_compl_1 = 0.0
   sum_frac_compl_2 = 0.0
 
@@ -99,10 +103,9 @@ if __name__ == "__main__":
       if mask_hack[prob]:
         idx = 1
 
-    '''
-    v1 = prob_infos[0][prob].get_mean_par(par)
-    v2 = prob_infos[1][prob].get_mean_par(par)
-    '''
+    par2_1 = prob_infos[0][prob].get_mean_par(par)
+    par2_2 = prob_infos[1][prob].get_mean_par(par)
+    
     v1 = prob_infos[0][prob].get_solve_prob()
     v2 = prob_infos[1][prob].get_solve_prob()
 
@@ -134,13 +137,19 @@ if __name__ == "__main__":
     sum_frac_diff_1 += max(v1-v2,0)
     sum_frac_diff_2 += max(v2-v1,0)
     
+    # print(prob,par2_1,par2_2)
+    sum_par2_diff_1 += max(par2_1-par2_2,0)
+    sum_par2_diff_2 += max(par2_2-par2_1,0)
+    
     sum_frac_compl_1 += (1-v2)*v1
     sum_frac_compl_2 += (1-v1)*v2
     
     sum_frac_var_1 += (1-v1)*v1
     sum_frac_var_2 += (1-v2)*v2
-    
-        
+  
+  sum_par2_diff_1 /= len(prob_info)
+  sum_par2_diff_2 /= len(prob_info)
+  
   import matplotlib.pyplot as plt
   fig, ax1 = plt.subplots(figsize=(3, 3))
   # ax1.scatter(Xs, Ys, c = Cs, s = 1)
@@ -160,6 +169,7 @@ if __name__ == "__main__":
   plt.close(fig)
   
   print("sum_frac_diff:",sum_frac_diff_1-sum_frac_diff_2,"=",sum_frac_diff_1,"-",sum_frac_diff_2)
+  print("sum_par2_diff:",sum_par2_diff_1-sum_par2_diff_2,"=",sum_par2_diff_1,"-",sum_par2_diff_2)
   
   print("sum_frac_compl:",sum_frac_compl_1,sum_frac_compl_2)
   print("sum_frac_var:",sum_frac_var_1,sum_frac_var_2)
